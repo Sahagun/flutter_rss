@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'global.dart';
+import 'main.dart';
 
 class LoginForm extends StatefulWidget {
   @override
   LoginFormState createState() {
+    print("Test Login " + Global().isLoggedin().toString());
     return LoginFormState();
   }
 }
@@ -18,52 +20,63 @@ class LoginFormState extends State<LoginForm> {
   final _formKey = GlobalKey<FormState>();
   bool _obscureText = true;
 
-  String _password = '';
-  String _email = '';
+  String _password = 'SuperSecretPassword';
+  String _email = 'js@example.com';
 
-  FutureBuilder _loginButton(String _email, String _password){
-    print('login: a');
+  String _status = 'not logged in';
+
+  void _updateStatus(){
+    setState(() {
+      _status = Global().userStatus();
+    });
+
+  }
+
+  FutureBuilder _loginButtonStatus(String _email, String _password){
     Future<String> result = Global().login(_email, _password);
 
     return FutureBuilder(
         future: result,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            print('login: You have an error! ${snapshot.error.toString()}');
+            // print('login: You have an error! ${snapshot.error.toString()}');
             return Text(snapshot.data);
           }
           else if (snapshot.hasData) {
-            print('Has Data');
-            //return LoginForm();
-            // test();
-            print('login: You have an error with data!');
+            // print('login: Has Data');
+            // if (Global().isLoggedin()){
+            //   Navigator.push(
+            //       context,
+            //       MaterialPageRoute(builder: (context) => FrontPage())
+            //   );
+            // }
             return Text(snapshot.data);
           }
           else {
-            print('loading');
+            // print('loading');
             return Text("loading");
           }
         }
     );
   }
 
-  FutureBuilder _registerButton(String _email, String _password){
+  FutureBuilder _registerButtonStatus(String _email, String _password){
     Future<String> result = Global().register(_email, _password);
     return FutureBuilder(
         future: result,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            print('You have an error! ${snapshot.error.toString()}');
+            // print('You have an error! ${snapshot.error.toString()}');
             return Text(snapshot.data);
           }
           else if (snapshot.hasData) {
-            print('Has Data');
+            // print('Has Data');
             //return LoginForm();
             // test();
             return Text(snapshot.data);
           }
           else {
-            print('loading');
+            // print('loading');
             return Text("loading");
           }
         }
@@ -94,6 +107,7 @@ class LoginFormState extends State<LoginForm> {
                           hintText: 'Email',
                           labelText: 'Email *',
                         ),
+                        initialValue: "js@example.com",
                         onChanged: (String value){
                           _email = value;
                         },
@@ -115,6 +129,7 @@ class LoginFormState extends State<LoginForm> {
                                   hintText: 'Password',
                                   labelText: 'Password *',
                                 ),
+                                initialValue: "SuperSecretPassword",
                                 obscureText: _obscureText,
                                 onChanged: (String value){
                                   _password = value;
@@ -145,13 +160,18 @@ class LoginFormState extends State<LoginForm> {
                             // REgister
                             ElevatedButton(
                             onPressed: () {
-                              // Validate returns true if the form is valid, otherwise false.
                               if (_formKey.currentState.validate()) {
-                                // If the form is valid, display a snackbar. In the real world,
-                                // you'd often call a server or save the information in a database.
+                                FutureBuilder futureBuild =  _registerButtonStatus(_email,_password);
                                 Scaffold
                                     .of(context)
-                                    .showSnackBar(SnackBar(content: _registerButton(_email,_password) ));
+                                    .showSnackBar(SnackBar(content: futureBuild ));
+                                      futureBuild.future.then((value) {
+                                        if (Global().isLoggedin()){
+                                          Navigator.of(context).pushReplacement(new MaterialPageRoute(builder: (BuildContext context) => FrontPage()));
+                                        }
+                                    });
+
+
                               }
                             },
                             child: Text('Register'),
@@ -160,21 +180,24 @@ class LoginFormState extends State<LoginForm> {
                           // Login
                           ElevatedButton(
                             onPressed: () {
-                              // Validate returns true if the form is valid, otherwise false.
                               if (_formKey.currentState.validate()) {
-                                // If the form is valid, display a snackbar. In the real world,
-                                // you'd often call a server or save the information in a database.
-
+                                FutureBuilder futureBuild =  _loginButtonStatus(_email,_password);
                                 Scaffold
                                     .of(context)
-                                    .showSnackBar(SnackBar(content: _loginButton(_email,_password)));
+                                    .showSnackBar(SnackBar(content: futureBuild));
+
+                                // Call back when done logging in or not
+                                futureBuild.future.then((value) {
+                                  if (Global().isLoggedin()){
+                                    Navigator.of(context).pushReplacement(new MaterialPageRoute(builder: (BuildContext context) => FrontPage()));
+                                  }
+                                });
                               }
                             },
                             child: Text('Login'),
                           ),
                       ]
                       )
-
             ]
           )
         )

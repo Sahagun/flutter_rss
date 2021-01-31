@@ -1,8 +1,15 @@
+import 'dart:async';
+// import 'dart:html';
+
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:sqflite/sqflite.dart';
 
 
+import 'AddRSSFeed.dart';
+import 'RSSListView.dart';
 import 'global.dart';
 import 'login.dart';
 
@@ -14,16 +21,17 @@ Future<void> main() async {
 class MyApp extends StatelessWidget {
   final Future<FirebaseApp> _fbApp = Firebase.initializeApp();
 
-
   Future<void> test() async {
-    print("JS: is logged in " + Global().isLoggedIn.toString());
+    await Global().fbLoadRSS();
+
+    // print("JS: is logged in " + Global().isLoggedIn.toString());
 
     // print("JS: registered " + (await Global().register("js@example.com", "SuperSecretPassword")).toString());
-    print("JS: login " + (await Global().login("js@example.com", "SuperSecretPassword")).toString());
+    // print("JS: login " + (await Global().login("js@example.com", "SuperSecretPassword")).toString());
 
-    print("JS: is logged in " + Global().isLoggedIn.toString());
-    var o = Global().logout();
-    print("JS: is logged in " + Global().isLoggedIn.toString());
+    // print("JS: is logged in " + Global().isLoggedIn.toString());
+    // var o = Global().logout();
+    // print("JS: is logged in " + Global().isLoggedIn.toString());
 
   }
 
@@ -53,17 +61,26 @@ class MyApp extends StatelessWidget {
         future: _fbApp,
         builder: (context, snapshot){
           if(snapshot.hasError){
-            print('You have an error! ${snapshot.error.toString()}');
+            // print('You have an error! ${snapshot.error.toString()}');
             return Text('Error');
           }
           else if (snapshot.hasData){
-            print('Has Data');
+            // print('Has Data');
             //return LoginForm();
             // test();
-            return MyHomePage(title: 'The Shayna Times');
+
+            // If logged in go to Front Page Else Login Page
+            FirebaseAuth auth = FirebaseAuth.instance;
+            if (auth.currentUser != null) {
+              Global().userID = auth.currentUser.uid;
+              return FrontPage();
+            }
+            else {
+              return MyHomePage(title: 'The CodingMinds Times');
+            }
           }
           else{
-            print('loading');
+            // print('loading');
             return Center(
                 child: CircularProgressIndicator(),
             );
@@ -96,50 +113,33 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
 
+
   void _incrementCounter() {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
       _counter++;
     });
   }
 
-
-
-
-
-
-
-
-
-
-
   void _register() {
     setState(() async {
       try {
-        print("JS: try register");
+        // print("JS: try register");
         UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
             email: "barry.allen@example.com",
             password: "SuperSecretPassword!"
         );
-        print('JS: ' + userCredential.user.toString());
+        // print('JS: ' + userCredential.user.toString());
       } on FirebaseAuthException catch (e) {
         if (e.code == 'weak-password') {
-          print('The password provided is too weak.');
+          // print('The password provided is too weak.');
         } else if (e.code == 'email-already-in-use') {
-          print('The account already exists for that email.');
+          // print('The account already exists for that email.');
         }
       } catch (e) {
-        print(e);
+        // print(e);
       }
     });
   }
-
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -176,23 +176,101 @@ class _MyHomePageState extends State<MyHomePage> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             LoginForm(),
-            //
-            // Text(
-            //   'You have pushed the button this many times:',
-            // ),
-            // Text(
-            //   '$_counter',
-            //   style: Theme.of(context).textTheme.headline4,
-            // ),
           ],
         ),
       ),
+
       floatingActionButton: FloatingActionButton(
-        // onPressed: Global().register("js@a.con", "abc"),
-        // onPressed: _login,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+        onPressed: () {
+          Global().fbLoadRSS();
+        },
+        child: Text("Test"),
+      ),
+
+    );
+  }
+}
+
+
+
+
+
+
+// Where all the articles are gathered
+class FrontPage extends StatefulWidget {
+  @override
+  _FrontPageState createState() => _FrontPageState();
+}
+
+class _FrontPageState extends State<FrontPage>{
+  FirebaseAuth auth = FirebaseAuth.instance;
+
+  FutureOr refresh(dynamic value) {
+    setState(() {});
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("News Stand"),
+      ),
+      body: Center(
+          child:
+            Column(
+              children: <Widget>[
+                // Global().userStatusText(),
+                Expanded(
+                  child:RssListView(),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.push (
+                          context,
+                          // MaterialPageRoute(builder: (context) => AddRSSPage()),).then(refresh);
+                          MaterialPageRoute(builder: (context) => AddRSSPage()),);
+                      },
+                      child: Text('Add Rss'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Global().restartDatabase();
+                        Global().fbClearUserRSS();
+                        Global().logout();
+                        refresh(null);
+                        // Navigator.of(context).pushReplacement(new MaterialPageRoute(builder: (BuildContext context) => MyHomePage(title: 'The Shayna Times')));
+                      },
+                      child: Text('Clear Rss'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Global().logout();
+                        // print('try log out');
+                        Navigator.of(context).pushReplacement(new MaterialPageRoute(builder: (BuildContext context) => MyHomePage(title: 'The CodingMinds Times')));
+                      },
+                      child: Text("Logout"),
+                    ),
+
+                  ],
+                )
+
+              ]
+
+            ),
+      ),
+
+      // floatingActionButton: FloatingActionButton(
+      //   onPressed: () {
+      //     Global().logout();
+      //     print('try log out');
+      //     Navigator.of(context).pushReplacement(new MaterialPageRoute(builder: (BuildContext context) => MyHomePage(title: 'The Shayna Times')));
+      //   },
+      //   child: Text("Logout"),
+      // ),
+
     );
   }
 }
