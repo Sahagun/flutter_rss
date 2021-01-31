@@ -179,14 +179,6 @@ class _MyHomePageState extends State<MyHomePage> {
           ],
         ),
       ),
-
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Global().fbLoadRSS();
-        },
-        child: Text("Test"),
-      ),
-
     );
   }
 }
